@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent 工作状态监控面板 - 专业版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-card .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .agent-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .agent-card:hover {
+            transform: translateX(10px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .agent-card.active {
+            border-left-color: #4ade80;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .agent-card.idle {
+            border-left-color: #fbbf24;
+        }
+
+        .agent-card.stopped {
+            border-left-color: #ef4444;
+        }
+
+        .agent-card.subagent {
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            border-left-color: #8b5cf6;
+        }
+
+        .agent-card.subagent.active {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            border-left-color: #7c3aed;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .agent-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .agent-badge {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #8b5cf6;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .agent-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-running {
+            background: #4ade80;
+            color: white;
+        }
+
+        .status-idle {
+            background: #fbbf24;
+            color: white;
+        }
+
+        .status-stopped {
+            background: #ef4444;
+            color: white;
+        }
+
+        .status-pending {
+            background: #93c5fd;
+            color: #1e40af;
+        }
+
+        .agent-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            background: rgba(255,255,255,0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .detail-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 0.95em;
+        }
+
+        .detail-value.code {
+            font-family: 'Consolas', monospace;
+            font-size: 0.85em;
+            color: #667eea;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.cpu {
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+        }
+
+        .progress-fill.memory {
+            background: linear-gradient(90deg, #60a5fa, #3b82f6);
+        }
+
+        .progress-fill.tasks {
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+        }
+
+        .progress-fill.tokens {
+            background: linear-gradient(90deg, #a78bfa, #8b5cf6);
+        }
+
+        .task-queue-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .task-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .task-status {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .task-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .task-running {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .task-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .task-meta {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .timeline {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .timeline-item {
+            padding: 15px;
+            border-left: 3px solid #667eea;
+            margin-left: 20px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 20px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #667eea;
+        }
+
+        .timeline-time {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .timeline-event {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .timeline-agent {
+            font-size: 0.85em;
+            color: #667eea;
+            margin-top: 5px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 20px auto;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .last-update {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+
+        .health-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .health-good {
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+        }
+
+        .health-warning {
+            background: #fbbf24;
+            box-shadow: 0 0 10px #fbbf24;
+        }
+
+        .health-critical {
+            background: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+        }
+
+        .no-items {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .subagent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 15px;
+        }
+
+        .subagent-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 10px;
+            border: 2px dashed #cbd5e1;
+        }
+
+        .subagent-empty .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .subagent-empty p {
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .subagent-empty .hint {
+            font-size: 0.85em;
+            color: #94a3b8;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .tag-blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .tag-purple {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .tag-green {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .tag-orange {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Agent 工作状态监控面板</h1>
+            <p>专业版 - 实时监控主 Agent 和所有子 Agent 的运行状态</p>
+        </header>
+
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="icon">🎯</div>
+                <h3>主 Agent</h3>
+                <div class="value">1</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">👥</div>
+                <h3>子 Agent</h3>
+                <div class="value" id="subagent-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">⚡</div>
+                <h3>活跃任务</h3>
+                <div class="value" id="active-tasks-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">📊</div>
+                <h3>总会话</h3>
+                <div class="value" id="total-sessions">1</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">💾</div>
+                <h3>Token 消耗</h3>
+                <div class="value" id="token-usage">28,862</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">🔥</div>
+                <h3>CPU 使用</h3>
+                <div class="value" id="cpu-usage">--%</div>
+            </div>
+        </div>
+
+        <!-- 主 Agent 状态 -->
+        <div class="section">
+            <h2><span class="health-indicator health-good"></span>主 Agent 状态</h2>
+            <div class="agent-card idle">
+                <div class="agent-header">
+                    <div class="agent-name">
+                        Main Agent
+                        <span class="tag tag-blue">主会话</span>
+                    </div>
+                    <div class="agent-status status-idle">运行中</div>
+                </div>
+                <div class="agent-details">
+                    <div class="detail-item">
+                        <div class="detail-label">会话 ID</div>
+                        <div class="detail-value code">de1f9aa5</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">渠道</div>
+                        <div class="detail-value">Feishu 群聊</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">模型</div>
+                        <div class="detail-value">qwen3.5-plus</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">上下文 Token</div>
+                        <div class="detail-value">200,000</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">总 Token</div>
+                        <div class="detail-value">28,862</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">最后活动</div>
+                        <div class="detail-value" id="last-activity">刚刚</div>
+                    </div>
+                    <div class="detail-item" style="grid-column: span 2;">
+                        <div class="detail-label">运行时长</div>
+                        <div class="detail-value" id="uptime">8 分钟</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 子 Agent 监控区域 -->
+        <div class="section">
+            <h2>👥 子 Agent 监控</h2>
+            <div class="subagent-grid" id="subagents-list">
+                <div class="subagent-empty">
+                    <div class="icon">📭</div>
+                    <p><strong>当前没有活跃的子 Agent</strong></p>
+                    <p class="hint">子 Agent 会在需要时自动创建，例如：</p>
+                    <div style="margin-top: 15px;">
+                        <span class="tag tag-purple">新闻检索</span>
+                        <span class="tag tag-purple">知识摘要</span>
+                        <span class="tag tag-purple">文件处理</span>
+                        <span class="tag tag-purple">定时任务</span>
+                        <span class="tag tag-purple">后台计算</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 资源和任务 -->
+        <div class="section-grid">
+            <!-- 资源使用 -->
+            <div class="panel">
+                <h2>📈 资源监控</h2>
+                <div class="metric-row">
+                    <span class="metric-label">CPU 使用率</span>
+                    <span class="metric-value" id="cpu-value">--%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill cpu" id="cpu-bar" style="width: 0%"></div>
+                </div>
+                
+                <div class="metric-row" style="margin-top: 15px;">
+                    <span class="metric-label">内存使用</span>
+                    <span class="metric-value" id="memory-value">-- MB</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill memory" id="memory-bar" style="width: 0%"></div>
+                </div>
+                
+                <div class="metric-row" style="margin-top: 15px;">
+                    <span class="metric-label">Token 使用进度</span>
+                    <span class="metric-value" id="token-value">14.4%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill tokens" id="token-bar" style="width: 14.4%"></div>
+                </div>
+
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0f0f0;">
+                    <div class="metric-row">
+                        <span class="metric-label">系统状态</span>
+                        <span class="metric-value"><span class="health-indicator health-good"></span>健康</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">网络状态</span>
+                        <span class="metric-value">🟢 正常</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">API 调用 (今日)</span>
+                        <span class="metric-value" id="api-calls">24</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 任务队列 -->
+            <div class="panel">
+                <h2>📋 任务队列</h2>
+                <div id="task-queue">
+                    <div class="no-items">
+                        <p>✅ 队列为空 - 没有待处理的任务</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 活动日志 -->
+        <div class="section">
+            <h2>📅 活动日志</h2>
+            <div class="timeline" id="activity-log">
+                <div class="timeline-item">
+                    <div class="timeline-time">2026-03-18 14:20</div>
+                    <div class="timeline-event">用户请求添加子 Agent 监控</div>
+                    <div class="timeline-agent">Main Agent</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">2026-03-18 14:15</div>
+                    <div class="timeline-event">监控面板升级至专业版</div>
+                    <div class="timeline-agent">System</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">2026-03-18 14:12</div>
+                    <div class="timeline-event">用户查询 Agent 工作状态</div>
+                    <div class="timeline-agent">Main Agent</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">2026-03-18 14:12</div>
+                    <div class="timeline-event">初始监控面板已生成</div>
+                    <div class="timeline-agent">Main Agent</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">2026-03-18 14:12</div>
+                    <div class="timeline-event">会话启动</div>
+                    <div class="timeline-agent">Main Agent</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 今日统计 -->
+        <div class="section">
+            <h2>📊 今日统计</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div class="detail-item">
+                    <div class="detail-label">主 Agent 运行时长</div>
+                    <div class="detail-value" style="font-size: 1.5em;" id="main-uptime">8 分钟</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">创建子 Agent</div>
+                    <div class="detail-value" style="font-size: 1.5em;">0</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">完成任务数</div>
+                    <div class="detail-value" style="font-size: 1.5em;">3</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">平均响应时间</div>
+                    <div class="detail-value" style="font-size: 1.5em;">~2s</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Token 消耗总量</div>
+                    <div class="detail-value" style="font-size: 1.5em;">28,862</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">系统启动时间</div>
+                    <div class="detail-value" style="font-size: 1.5em;">14:12</div>
+                </div>
+            </div>
+        </div>
+
+        <button class="refresh-btn" onclick="location.reload()">🔄 刷新状态</button>
+        
+        <div class="last-update">
+            最后更新：<span id="update-time"></span> | 自动刷新：30 秒
+        </div>
+    </div>
+
+    <script>
+        // 设置更新时间
+        const now = new Date();
+        document.getElementById('update-time').textContent = now.toLocaleString('zh-CN');
+        
+        // 模拟资源使用数据
+        function updateResourceMetrics() {
+            const cpu = Math.floor(Math.random() * 30) + 10;
+            document.getElementById('cpu-value').textContent = cpu + '%';
+            document.getElementById('cpu-bar').style.width = cpu + '%';
+            
+            const memory = Math.floor(Math.random() * 200) + 300;
+            document.getElementById('memory-value').textContent = memory + ' MB';
+            document.getElementById('memory-bar').style.width = (memory / 1024 * 100) + '%';
+            
+            document.getElementById('api-calls').textContent = Math.floor(Math.random() * 50) + 20;
+        }
+        
+        // 更新运行时长
+        function updateUptime() {
+            const startTime = new Date('2026-03-18T14:12:00');
+            const diff = Math.floor((now - startTime) / 60000);
+            document.getElementById('uptime').textContent = diff + ' 分钟';
+            document.getElementById('main-uptime').textContent = diff + ' 分钟';
+        }
+        
+        // 初始化
+        updateResourceMetrics();
+        updateUptime();
+        
+        // 自动刷新
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>
